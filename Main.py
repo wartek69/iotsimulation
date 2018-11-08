@@ -1,23 +1,48 @@
-from Grid import Grid
 from random import shuffle
 import pygame
 import sys
-import time
+import MQTT
+import datetime, json
+from Cell import Cell
 
-width = 70
-height = 70
+width = 50
+height = 50
 cell_width = 10
+mqttclient = MQTT.mqtt()
+grid = [[Cell() for j in range(height)] for i in range(width)]
 
-def visualize(grid):
+# starts mqtt listener
+def start_mqtt_listener():
+    mqttclient.connect()
+    mqttclient.add_listener_func(message_callback)
+# gets called when a mqtt message arrives
+def message_callback(msg):
+    #strip the b''
+    msg = msg[2:-1]
+    for row in grid:
+        for cell in row:
+            res = {"timestamp": datetime.datetime.now().isoformat(),
+                   "value": -1,
+                   "username": "simulator"}
+            if cell.getPreferences()[1] == msg:
+                res["value"] = 1
+            mqttclient.publish("alex",json.dumps(res))
+    print(msg)
+
+
+
+def visualize():
     # init pygame
     pygame.init()
     screen = pygame.display.set_mode((width * cell_width, height * cell_width))
+    pygame.display.set_caption("IOT simulator")
     while 1:
         for i in range(width):
             for j in range(height):
                 dirs = [[-1,0],[0,1],[0,-1],[1,0]]
+                #shuffles dir to counter bias
                 shuffle(dirs)
-                this_cell = grid.grid[i][j]
+                this_cell = grid[i][j]
                 for _dir in dirs:
                     # calculate neighbours
                     try:
@@ -27,7 +52,7 @@ def visualize(grid):
                         if j + _dir[1] == -1:
                             raise IndexError("")
 
-                        neighbour = grid.grid[i + _dir[0]][j + _dir[1]]
+                        neighbour = grid[i + _dir[0]][j + _dir[1]]
                         result = neighbour.getInfluenceFactor()
                         if result[1] == "rock":
                             this_cell.rock = 0.5 * this_cell.rock + result[0]
@@ -52,14 +77,14 @@ def visualize(grid):
                         pass
 
                 rect = pygame.Rect(i * cell_width, j * cell_width, cell_width, cell_width)
-                pygame.draw.rect(screen, grid.grid[i][j].getPreferences()[0], rect)
+                pygame.draw.rect(screen, grid[i][j].getPreferences()[0], rect)
         pygame.display.update()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT: sys.exit()
 
 if __name__ == '__main__':
-    # create Grid
-    grid = Grid(width, height)
-    visualize(grid)
+
+    start_mqtt_listener()
+    visualize()
 

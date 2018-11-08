@@ -22,10 +22,7 @@ class Cell:
 
     #returns your influence factor to your neighbour
     def getInfluenceFactor(self):
-        tet = self.getPreferences()[2]
-        rand = np.random.uniform(0, 1)
-        print(tet)
-        ifa = 0.25 * self.getPreferences()[2] + 0.25 * rand
+        ifa = 0.25 * self.getPreferences()[2] + 0.25 * np.random.uniform(0, 1)
         return ifa, self.getPreferences()[1]
 
 
